@@ -1,0 +1,16 @@
+[
+{
+  "modid": "eternalitems",
+  "name": "Eternal Items",
+  "description": "Never let items despawn, however cache a list of previous items that will respawn themselves if they are not picked up",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["AlexIIL"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": ["required-after:alexiillib"]
+}
+]

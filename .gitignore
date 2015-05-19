@@ -1,0 +1,16 @@
+/bin/
+/testing/
+/.gradle/
+/.project
+/.classpath
+/.settings/
+/eclipse/
+/serverTest/
+
+
+/EternalItems.iml
+/EternalItems.ipr
+/EternalItems.iws
+/out/
+/build/
+/VersionInfo/
