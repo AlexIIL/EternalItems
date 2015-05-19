@@ -11,7 +11,6 @@ import com.google.common.collect.Queues;
 
 public class ItemWorldSaveHandler extends WorldSavedData {
     public static final String NAME = "alexiil.mods.items.data";
-
     private Deque<EntityItem> items = Queues.newArrayDeque();
 
     public ItemWorldSaveHandler() {
