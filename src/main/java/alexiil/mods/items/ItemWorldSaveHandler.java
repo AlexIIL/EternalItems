@@ -28,10 +28,10 @@ public class ItemWorldSaveHandler extends WorldSavedData {
         items.clear();
         for (int i = 0; i < list.tagCount(); i++) {
             EntityItem entity = new EntityItem(null, 0, 0, 0);
-            entity.readFromNBT(nbt);
+            entity.readFromNBT(list.getCompoundTagAt(i));
             items.add(entity);
         }
-
+        System.out.println("Loaded " + items.size() + " items");
     }
 
     @Override
@@ -43,6 +43,8 @@ public class ItemWorldSaveHandler extends WorldSavedData {
             list.appendTag(itemNBT);
         }
         nbt.setTag("items", list);
+
+        System.out.println("Saved " + items.size() + " items");
     }
 
     @Override

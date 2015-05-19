@@ -39,7 +39,7 @@ public class EternalItems extends AlexIILMod {
 
         comment =
             "True if you want the items added to the world to be hard capped to the number "
-                + "(but the items that expire in the world will be added to the cache if their is not enough room).";
+                + "(but the items that expire in the world will be added to the cache if there is not enough room).";
         hardCap = cfg.cfg().getBoolean("hardCap", Configuration.CATEGORY_GENERAL, true, comment);
 
         cfg.saveAll();
