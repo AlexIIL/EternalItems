@@ -20,7 +20,7 @@ public class CommandEternalItems extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "eternalitems <debug|show|stats|reset>";
+        return "eternalitems <debug|position|stats|reset>";
     }
 
     @Override
@@ -39,7 +39,7 @@ public class CommandEternalItems extends CommandBase {
             for (String line : text)
                 sender.addChatMessage(new ChatComponentText(line));
         }
-        else if (args[0].equals("show")) {
+        else if (args[0].equals("position")) {
             String[] text = ItemCacheHandler.getItemPositionInfo(world);
             for (String line : text)
                 sender.addChatMessage(new ChatComponentText(line));
