@@ -101,12 +101,12 @@ public class ItemCacheHandler {
         Deque<EntityItem> items = getCachedItems(world);
 
         if (itemsInWorld < EternalItems.getMaxItems() && items.isEmpty()) {
-            event.extraLife = 6000;
+            event.extraLife = 1000;
             event.setCanceled(true);
         }
         else {
             items.add(item);
-            item.lifespan += 6000;
+            item.lifespan += 1000;
         }
     }
 
