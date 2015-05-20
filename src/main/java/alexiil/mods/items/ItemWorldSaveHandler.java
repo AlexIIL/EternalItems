@@ -1,17 +1,27 @@
 package alexiil.mods.items;
 
+import java.util.Arrays;
 import java.util.Deque;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagIntArray;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.WorldSavedData;
 
+import org.apache.commons.lang3.mutable.MutableLong;
+
+import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 
 public class ItemWorldSaveHandler extends WorldSavedData {
     public static final String NAME = "alexiil.mods.items.data";
-    private Deque<EntityItem> items = Queues.newArrayDeque();
+    private final Deque<EntityItem> items = Queues.newArrayDeque();
+    private final Map<ChunkCoordIntPair, Integer> chunkStats = Maps.newHashMap();
+    private final MutableLong startProfiling = new MutableLong(0);
 
     public ItemWorldSaveHandler() {
         this(NAME);
@@ -23,6 +33,8 @@ public class ItemWorldSaveHandler extends WorldSavedData {
 
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
+        startProfiling.setValue(nbt.getLong("startProfiling"));
+
         NBTTagList list = nbt.getTagList("items", 10);
         items.clear();
         for (int i = 0; i < list.tagCount(); i++) {
@@ -30,10 +42,25 @@ public class ItemWorldSaveHandler extends WorldSavedData {
             entity.readFromNBT(list.getCompoundTagAt(i));
             items.add(entity);
         }
+
+        list = nbt.getTagList("chunkStats", 11);
+        chunkStats.clear();
+        for (int i = 0; i < list.tagCount(); i++) {
+            int[] intArray = list.getIntArray(i);
+            if (intArray.length != 3) {
+                EternalItems.INSTANCE.log.warn("Found an integer array that was not 3 long!! " + "(array = " + Arrays.toString(intArray)
+                    + ", index = " + i + ")");
+            }
+            else {
+                chunkStats.put(new ChunkCoordIntPair(intArray[0], intArray[1]), intArray[2]);
+            }
+        }
     }
 
     @Override
     public void writeToNBT(NBTTagCompound nbt) {
+        nbt.setLong("startProfiling", startProfiling.longValue());
+
         NBTTagList list = new NBTTagList();
         for (EntityItem item : items) {
             NBTTagCompound itemNBT = new NBTTagCompound();
@@ -41,6 +68,14 @@ public class ItemWorldSaveHandler extends WorldSavedData {
             list.appendTag(itemNBT);
         }
         nbt.setTag("items", list);
+
+        list = new NBTTagList();
+        for (Entry<ChunkCoordIntPair, Integer> chunk : chunkStats.entrySet()) {
+            ChunkCoordIntPair ccip = chunk.getKey();
+            int[] intArray = new int[] { ccip.chunkXPos, ccip.chunkZPos, chunk.getValue() };
+            list.appendTag(new NBTTagIntArray(intArray));
+        }
+        nbt.setTag("chunkStats", list);
     }
 
     @Override
@@ -53,7 +88,11 @@ public class ItemWorldSaveHandler extends WorldSavedData {
         return items;
     }
 
-    public void setItems(Deque<EntityItem> items) {
-        this.items = items;
+    public Map<ChunkCoordIntPair, Integer> getChunkStats() {
+        return chunkStats;
+    }
+
+    public MutableLong getStartProfiling() {
+        return startProfiling;
     }
 }

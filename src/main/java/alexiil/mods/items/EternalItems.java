@@ -13,6 +13,7 @@ import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent;
@@ -39,7 +40,7 @@ public class EternalItems extends AlexIILMod {
 
         comment =
             "True if you want the items added to the world to be hard capped to the number "
-                + "(but the items that expire in the world will be added to the cache if there is not enough room).";
+                + "(but the items that expire in the world will always be added to the cache if there is not enough room).";
         hardCap = cfg.cfg().getBoolean("hardCap", Configuration.CATEGORY_GENERAL, true, comment);
 
         cfg.saveAll();
@@ -53,6 +54,11 @@ public class EternalItems extends AlexIILMod {
     @EventHandler
     public void postInit(FMLPostInitializationEvent event) {
         super.postInit(event);
+    }
+
+    @EventHandler
+    public void serverStarting(FMLServerStartingEvent event) {
+        event.registerServerCommand(new CommandEternalItems());
     }
 
     @Override
