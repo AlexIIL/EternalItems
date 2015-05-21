@@ -34,9 +34,10 @@ public class EternalItems extends AlexIILMod {
         super.preInit(event);
         MinecraftForge.EVENT_BUS.register(this);
         FMLCommonHandler.instance().bus().register(this);
+        new ItemCacheHandler();
 
         String comment = "The maximum number of items allowed per world before new ones start to be cached.";
-        maxItems = cfg.cfg().getInt("maxItems", Configuration.CATEGORY_GENERAL, 100, 20, 6000, comment);
+        maxItems = cfg.cfg().getInt("maxItems", Configuration.CATEGORY_GENERAL, 200, 20, 6000, comment);
 
         comment =
             "True if you want the items added to the world to be hard capped to the number "
@@ -84,7 +85,7 @@ public class EternalItems extends AlexIILMod {
     // Mod related events
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void itemExpireEvent(ItemExpireEvent event) {
-        if (hardCap)
+        if (hardCap && event.entity.worldObj instanceof WorldServer)
             ItemCacheHandler.itemExpired(event);
     }
 

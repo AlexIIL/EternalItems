@@ -6,6 +6,8 @@
 ##
 #########################################################################################
 
+NAME="EternalItems"
+
 printMessage ( ) {
     echo
     echo "  $*"
@@ -25,9 +27,9 @@ tryExecute ( ) {
 }
 
 if [ "$1" = "build" ] ; then
-  printMessage "Building the jar files of Eternal Items"
+  printMessage "Building the jar files of $NAME"
 else
-  printMessage "Setting up Eternal Items for development"
+  printMessage "Setting up $NAME for development"
 fi
 
 printMessage "Initialising submodules..."
@@ -40,10 +42,10 @@ tryExecute "./gradlew setupCIWorkspace"
 printMessage "Building AlexIILLib..."
 tryExecute "./gradlew build"
 cd ..
-printMessage "Setting Up Eternal Items..."
+printMessage "Setting Up $NAME..."
 if [ "$1" = "build" ]; then
     tryExecute "./gradlew setupCIWorkspace"
-    printMessage "Building Eternal Items..."
+    printMessage "Building $NAME..."
     tryExecute "./gradlew build"
     if [ "$2" = "version" ]; then
         printMessage "Setting up Version Info..."
@@ -53,7 +55,7 @@ if [ "$1" = "build" ]; then
         tryExecute "./gradlew build"
         cd build/libs
         printMessage "Running Version Info..."
-        tryExecute "java -jar VersionInfo.jar AlexIIL EternalItems"
+        tryExecute "java -jar VersionInfo.jar AlexIIL $NAME"
     fi
     printMessage "Build Complete!"
 else

@@ -1,5 +1,6 @@
 package alexiil.mods.items;
 
+import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
@@ -29,6 +30,14 @@ public class ItemCacheHandler {
     private static final Map<World, Deque<EntityItem>> cachedItems = new MapMaker().weakKeys().makeMap();
     private static final Map<World, Map<ChunkCoordIntPair, Integer>> chunkStats = new MapMaker().weakKeys().makeMap();
     private static final Map<World, MutableLong> startProfiling = new MapMaker().weakKeys().makeMap();
+    private static final Field entityItemAge;
+
+    static {
+        Class<EntityItem> cls = EntityItem.class;
+        Field[] fields = cls.getDeclaredFields();
+        entityItemAge = fields[1];
+        entityItemAge.setAccessible(true);
+    }
 
     private static Deque<EntityItem> getCachedItems(World world) {
         if (cachedItems.containsKey(world))
@@ -94,19 +103,40 @@ public class ItemCacheHandler {
         incrementChunkStat(world, chunk);
     }
 
+    private static boolean setAgeTo0(EntityItem entity) {
+        try {
+            // TODO: Use an access transformer instead of this slow reflection
+            entityItemAge.set(entity, new Integer(0));
+            return true;
+        }
+        catch (IllegalArgumentException e) {
+            EternalItems.INSTANCE.log.warn(
+                "Illegal argument exception while trying to edit the field age! Did you select the wrong field programmer?", e);
+        }
+        catch (IllegalAccessException e) {
+            EternalItems.INSTANCE.log.warn(
+                "Illegal Access Exception while trying to edit the field age! Did you not give yourself access to it properly programmer?", e);
+        }
+        return false;
+    }
+
     public static void itemExpired(ItemExpireEvent event) {
         EntityItem item = event.entityItem;
         World world = item.worldObj;
         int itemsInWorld = getNumberOfItems(world);
         Deque<EntityItem> items = getCachedItems(world);
 
+        if (setAgeTo0(item))
+            item.lifespan = 1000;
+        else
+            item.lifespan += 1000;
+
         if (itemsInWorld < EternalItems.getMaxItems() && items.isEmpty()) {
-            event.extraLife = 1000;
+            event.extraLife = 0;
             event.setCanceled(true);
         }
         else {
             items.add(item);
-            item.lifespan += 1000;
         }
     }
 
@@ -139,7 +169,7 @@ public class ItemCacheHandler {
     public static String[] getDebugLines(World world) {
         Deque<EntityItem> items = getCachedItems(world);
         String[] lines = new String[2];
-        lines[0] = "Number of items in world: " + getNumberOfItems(world);
+        lines[0] = "Number of items in world: " + getNumberOfItems(world) + "/" + EternalItems.getMaxItems();
         lines[1] = "Current cache queue size: " + items.size();
         return lines;
     }
