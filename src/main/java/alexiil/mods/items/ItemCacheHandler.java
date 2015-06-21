@@ -1,13 +1,23 @@
 package alexiil.mods.items;
 
 import java.lang.reflect.Field;
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
+
+import org.apache.commons.lang3.mutable.MutableLong;
+
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.World;
@@ -20,14 +30,8 @@ import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
 import net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent;
 
-import org.apache.commons.lang3.mutable.MutableLong;
-
-import com.google.common.base.Predicates;
-import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
-
 public class ItemCacheHandler {
-    private static final Map<World, Deque<EntityItem>> cachedItems = new MapMaker().weakKeys().makeMap();
+    private static final Map<World, Map<ChunkCoordIntPair, Deque<EntityItem>>> cachedItems = new MapMaker().weakKeys().makeMap();
     private static final Map<World, Map<ChunkCoordIntPair, Integer>> chunkStats = new MapMaker().weakKeys().makeMap();
     private static final Map<World, MutableLong> startProfiling = new MapMaker().weakKeys().makeMap();
     private static final Field entityItemAge;
@@ -39,13 +43,21 @@ public class ItemCacheHandler {
         entityItemAge.setAccessible(true);
     }
 
-    private static Deque<EntityItem> getCachedItems(World world) {
+    private static Map<ChunkCoordIntPair, Deque<EntityItem>> getCachedItems(World world) {
         if (cachedItems.containsKey(world))
             return cachedItems.get(world);
         throw new Error("Tried to get a list of cached items before the world was loaded, this will not persist!");
         // Deque<EntityItem> items = Queues.newArrayDeque();
         // cachedItems.put(world, items);
         // return items;
+    }
+
+    private static Deque<EntityItem> getCachedItems(World world, ChunkCoordIntPair ccip) {
+        Map<ChunkCoordIntPair, Deque<EntityItem>> map = getCachedItems(world);
+        if (!map.containsKey(ccip)) {
+            map.put(ccip, new ArrayDeque<EntityItem>());
+        }
+        return map.get(ccip);
     }
 
     private static Map<ChunkCoordIntPair, Integer> getChunkMap(World world) {
@@ -62,14 +74,21 @@ public class ItemCacheHandler {
         ChunkCoordIntPair ccip = chunk.getChunkCoordIntPair();
         if (!stats.containsKey(ccip)) {
             stats.put(ccip, 1);
-        }
-        else {
+        } else {
             stats.put(ccip, stats.get(ccip) + 1);
         }
     }
 
+    // FIXME: Cache this value dammit! This probably really expensive and called multiple times per tick when it really
+    // doesn't need to be.
     private static int getNumberOfItems(World world) {
         return world.getEntities(EntityItem.class, Predicates.alwaysTrue()).size();
+    }
+
+    // FIXME: Cache this value dammit! This probably really expensive and called multiple times per tick when it really
+    // doesn't need to be.
+    private static int getNumberOfItems(World world, ChunkCoordIntPair ccip) {
+        return world.getEntities(EntityItem.class, new ChunkPredicate(ccip)).size();
     }
 
     public static void worldLoaded(WorldEvent.Load event) {
@@ -79,8 +98,7 @@ public class ItemCacheHandler {
         if (data == null) {
             items = new ItemWorldSaveHandler(ItemWorldSaveHandler.NAME);
             world.getPerWorldStorage().setData(ItemWorldSaveHandler.NAME, items);
-        }
-        else {
+        } else {
             items = (ItemWorldSaveHandler) data;
         }
 
@@ -93,8 +111,9 @@ public class ItemCacheHandler {
         World world = event.world;
         EntityItem item = (EntityItem) event.entity;
         int itemsInWorld = getNumberOfItems(world);
-        Deque<EntityItem> items = getCachedItems(world);
-        if (itemsInWorld >= EternalItems.getMaxItems()) {
+        ChunkCoordIntPair ccip = new ChunkCoordIntPair(((int) item.posX) >> 4, ((int) item.posZ) >> 4);
+        Deque<EntityItem> items = getCachedItems(world, ccip);
+        if (itemsInWorld >= EternalItems.getMaxItems() || getNumberOfItems(world, ccip) > EternalItems.getMaxItemsChunk()) {
             // Don't add the item to the world, instead add it to the cached queue
             event.setCanceled(true);
             items.add(item);
@@ -108,12 +127,10 @@ public class ItemCacheHandler {
             // TODO: Use an access transformer instead of this slow reflection
             entityItemAge.set(entity, new Integer(0));
             return true;
-        }
-        catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             EternalItems.INSTANCE.log.warn(
                 "Illegal argument exception while trying to edit the field age! Did you select the wrong field programmer?", e);
-        }
-        catch (IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             EternalItems.INSTANCE.log.warn(
                 "Illegal Access Exception while trying to edit the field age! Did you not give yourself access to it properly programmer?", e);
         }
@@ -124,19 +141,29 @@ public class ItemCacheHandler {
         EntityItem item = event.entityItem;
         World world = item.worldObj;
         int itemsInWorld = getNumberOfItems(world);
-        Deque<EntityItem> items = getCachedItems(world);
 
-        if (setAgeTo0(item))
+        ChunkCoordIntPair ccip = new ChunkCoordIntPair(((int) item.posX) >> 4, ((int) item.posZ) >> 4);
+        Deque<EntityItem> items = getCachedItems(world, ccip);
+
+        if (setAgeTo0(item)) {
             item.lifespan = 1000;
-        else
+        } else {
             item.lifespan += 1000;
-
-        if (itemsInWorld < EternalItems.getMaxItems() && items.isEmpty()) {
-            event.extraLife = 0;
-            event.setCanceled(true);
         }
-        else {
+
+        boolean spaceInWorld = itemsInWorld < EternalItems.getMaxItems();
+
+        if (!spaceInWorld) {
             items.add(item);
+        } else {
+            int itemsInChunk = getNumberOfItems(world, ccip);
+            boolean spaceInChunk = itemsInChunk < EternalItems.getMaxItemsChunk();
+            if (!spaceInChunk) {
+                items.add(item);
+            } else {
+                event.extraLife = 0;
+                event.setCanceled(true);
+            }
         }
     }
 
@@ -147,30 +174,56 @@ public class ItemCacheHandler {
         tryAddItems(world, getCachedItems(world));
     }
 
-    private static void tryAddItems(World world, Deque<EntityItem> items) {
-        while (addItem(world, items));
+    private static void tryAddItems(World world, Map<ChunkCoordIntPair, Deque<EntityItem>> map) {
+        while (addItem(world, map));
     }
 
     /** @return <code>True</code> if an item from the queue was added to the world without going over the item cap */
-    private static boolean addItem(World world, Deque<EntityItem> items) {
-        if (items.isEmpty())
+    private static boolean addItem(World world, Map<ChunkCoordIntPair, Deque<EntityItem>> map) {
+        if (map.isEmpty())
             return false;
 
         int itemsInWorld = getNumberOfItems(world);
         if (itemsInWorld >= EternalItems.getMaxItems())
             return false;
 
-        EntityItem entity = items.remove();
-        entity.worldObj = world;// If this has been loaded, then it could be null, so just set it anyway
-        world.spawnEntityInWorld(entity);
-        return true;
+        boolean added = false;
+
+        for (ChunkCoordIntPair ccip : map.keySet()) {
+            Deque<EntityItem> queue = map.get(ccip);
+            if (queue.isEmpty())
+                continue;
+            boolean spaceInChunk = getNumberOfItems(world, ccip) < EternalItems.getMaxItemsChunk();
+            if (!spaceInChunk) {
+                continue;
+            }
+            EntityItem entity = queue.remove();
+            entity.worldObj = world;// If this has been loaded, then it could be null, so just set it anyway
+            world.spawnEntityInWorld(entity);
+            itemsInWorld++;
+            added = true;
+
+            if (itemsInWorld >= EternalItems.getMaxItems()) {
+                return true;
+            }
+        }
+        return added;
     }
 
     public static String[] getDebugLines(World world) {
-        Deque<EntityItem> items = getCachedItems(world);
+        Map<ChunkCoordIntPair, Deque<EntityItem>> items = getCachedItems(world);
         String[] lines = new String[2];
         lines[0] = "Number of items in world: " + getNumberOfItems(world) + "/" + EternalItems.getMaxItems();
-        lines[1] = "Current cache queue size: " + items.size();
+        int size = 0;
+        int numChunks = 0;
+        for (Entry<ChunkCoordIntPair, Deque<EntityItem>> entry : items.entrySet()) {
+            int added = entry.getValue().size();
+            size += added;
+            if (added > 0) {
+                numChunks++;
+            }
+        }
+        lines[1] = "Current cache queue size: " + size + ", spread over " + numChunks + " chunks.";
         return lines;
     }
 
@@ -223,5 +276,18 @@ public class ItemCacheHandler {
             lines[i + 1] = pre + coords;
         }
         return lines;
+    }
+
+    private static class ChunkPredicate implements Predicate<Entity> {
+        private final ChunkCoordIntPair ccip;
+
+        private ChunkPredicate(ChunkCoordIntPair ccip) {
+            this.ccip = ccip;
+        }
+
+        @Override
+        public boolean apply(Entity input) {
+            return input.posX - ccip.getXStart() <= 16 && input.posZ - ccip.getZStart() <= 16;
+        }
     }
 }

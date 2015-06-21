@@ -25,7 +25,7 @@ import alexiil.mods.lib.AlexIILMod;
 public class EternalItems extends AlexIILMod {
     @Instance(Lib.Mod.ID)
     public static EternalItems INSTANCE;
-    private static int maxItems;
+    private static int maxItemsPerWorld, maxItemsPerChunk;
     private static boolean hardCap;
 
     @Override
@@ -37,7 +37,10 @@ public class EternalItems extends AlexIILMod {
         new ItemCacheHandler();
 
         String comment = "The maximum number of items allowed per world before new ones start to be cached.";
-        maxItems = cfg.cfg().getInt("maxItems", Configuration.CATEGORY_GENERAL, 200, 20, 6000, comment);
+        maxItemsPerWorld = cfg.cfg().getInt("maxItems", Configuration.CATEGORY_GENERAL, 600, 20, 100000, comment);
+
+        comment = "The maximum number of items allowed per chunk before new ones are added to the queue of that chunk";
+        maxItemsPerChunk = cfg.cfg().getInt("maxItemsPerChunk", Configuration.CATEGORY_GENERAL, 30, 5, 1000, comment);
 
         comment =
             "True if you want the items added to the world to be hard capped to the number "
@@ -48,7 +51,11 @@ public class EternalItems extends AlexIILMod {
     }
 
     public static int getMaxItems() {
-        return maxItems;
+        return maxItemsPerWorld;
+    }
+
+    public static int getMaxItemsChunk() {
+        return maxItemsPerChunk;
     }
 
     @Override
@@ -62,6 +69,7 @@ public class EternalItems extends AlexIILMod {
         event.registerServerCommand(new CommandEternalItems());
     }
 
+    // Versioning
     @Override
     public String getCommitHash() {
         return Lib.Mod.COMMIT_HASH;

@@ -1,9 +1,15 @@
 package alexiil.mods.items;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import com.google.common.collect.Maps;
+
+import org.apache.commons.lang3.mutable.MutableLong;
 
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.nbt.NBTTagCompound;
@@ -12,14 +18,9 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.WorldSavedData;
 
-import org.apache.commons.lang3.mutable.MutableLong;
-
-import com.google.common.collect.Maps;
-import com.google.common.collect.Queues;
-
 public class ItemWorldSaveHandler extends WorldSavedData {
     public static final String NAME = "alexiil.mods.items.data";
-    private final Deque<EntityItem> items = Queues.newArrayDeque();
+    private final Map<ChunkCoordIntPair, Deque<EntityItem>> items = Maps.newHashMap();
     private final Map<ChunkCoordIntPair, Integer> chunkStats = Maps.newHashMap();
     private final MutableLong startProfiling = new MutableLong(0);
 
@@ -40,7 +41,11 @@ public class ItemWorldSaveHandler extends WorldSavedData {
         for (int i = 0; i < list.tagCount(); i++) {
             EntityItem entity = new EntityItem(null, 0, 0, 0);
             entity.readFromNBT(list.getCompoundTagAt(i));
-            items.add(entity);
+            ChunkCoordIntPair ccip = new ChunkCoordIntPair(((int) entity.posX) >> 4, ((int) entity.posY) >> 4);
+            if (!items.containsKey(ccip)) {
+                items.put(ccip, new ArrayDeque<EntityItem>());
+            }
+            items.get(ccip).add(entity);
         }
 
         list = nbt.getTagList("chunkStats", 11);
@@ -50,8 +55,7 @@ public class ItemWorldSaveHandler extends WorldSavedData {
             if (intArray.length != 3) {
                 EternalItems.INSTANCE.log.warn("Found an integer array that was not 3 long!! " + "(array = " + Arrays.toString(intArray)
                     + ", index = " + i + ")");
-            }
-            else {
+            } else {
                 chunkStats.put(new ChunkCoordIntPair(intArray[0], intArray[1]), intArray[2]);
             }
         }
@@ -62,10 +66,12 @@ public class ItemWorldSaveHandler extends WorldSavedData {
         nbt.setLong("startProfiling", startProfiling.longValue());
 
         NBTTagList list = new NBTTagList();
-        for (EntityItem item : items) {
-            NBTTagCompound itemNBT = new NBTTagCompound();
-            item.writeToNBT(itemNBT);
-            list.appendTag(itemNBT);
+        for (Collection<EntityItem> items : this.items.values()) {
+            for (EntityItem item : items) {
+                NBTTagCompound itemNBT = new NBTTagCompound();
+                item.writeToNBT(itemNBT);
+                list.appendTag(itemNBT);
+            }
         }
         nbt.setTag("items", list);
 
@@ -84,7 +90,7 @@ public class ItemWorldSaveHandler extends WorldSavedData {
         return true;
     }
 
-    public Deque<EntityItem> getItems() {
+    public Map<ChunkCoordIntPair, Deque<EntityItem>> getItems() {
         return items;
     }
 
