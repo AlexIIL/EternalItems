@@ -2,6 +2,7 @@ package alexiil.mods.items;
 
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.world.WorldServer;
+
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
@@ -20,8 +21,7 @@ import net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent;
 
 import alexiil.mods.lib.AlexIILMod;
 
-@Mod(modid = Lib.Mod.ID, guiFactory = "alexiil.mods.items.ConfigGuiFactory", dependencies = "required-after:alexiillib",
-        acceptableRemoteVersions = "*")
+@Mod(modid = Lib.Mod.ID, guiFactory = "alexiil.mods.items.ConfigGuiFactory", dependencies = Lib.Mod.DEPS, acceptableRemoteVersions = "*")
 public class EternalItems extends AlexIILMod {
     @Instance(Lib.Mod.ID)
     public static EternalItems INSTANCE;
@@ -42,8 +42,7 @@ public class EternalItems extends AlexIILMod {
         comment = "The maximum number of items allowed per chunk before new ones are added to the queue of that chunk";
         maxItemsPerChunk = cfg.cfg().getInt("maxItemsPerChunk", Configuration.CATEGORY_GENERAL, 30, 5, 1000, comment);
 
-        comment =
-            "True if you want the items added to the world to be hard capped to the number "
+        comment = "True if you want the items added to the world to be hard capped to the number "
                 + "(but the items that expire in the world will always be added to the cache if there is not enough room).";
         hardCap = cfg.cfg().getBoolean("hardCap", Configuration.CATEGORY_GENERAL, true, comment);
 
