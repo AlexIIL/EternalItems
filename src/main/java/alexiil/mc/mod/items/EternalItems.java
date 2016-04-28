@@ -19,7 +19,7 @@ import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent;
 
-@Mod(modid = Lib.Mod.ID, guiFactory = "alexiil.mc.mod.items.ConfigGuiFactory", dependencies = Lib.Mod.DEPS, acceptableRemoteVersions = "*")
+@Mod(modid = Lib.Mod.ID, guiFactory = "alexiil.mc.mod.items.ConfigGuiFactory", acceptableRemoteVersions = "*")
 public class EternalItems {
     @Instance(Lib.Mod.ID)
     public static EternalItems INSTANCE;

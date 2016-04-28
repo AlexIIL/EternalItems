@@ -52,8 +52,6 @@ minecraft {
     // replacing stuff in the source
     replace "@VERSION@", project.version
     replace "@MC_VERSION@", version
-    replace "@FORGE_VERSION_MIN@", config.forge_version
-    replace "@FORGE_VERSION_MAX@", config.forge_version_max
 }
 
 dependencies {

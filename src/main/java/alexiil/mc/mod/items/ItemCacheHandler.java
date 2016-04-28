@@ -31,14 +31,20 @@ public class ItemCacheHandler {
     private static final Map<World, Map<ChunkCoordIntPair, Deque<EntityItem>>> cachedItems = new MapMaker().weakKeys().makeMap();
     private static final Map<World, Map<ChunkCoordIntPair, Integer>> chunkStats = new MapMaker().weakKeys().makeMap();
     private static final Map<World, MutableLong> startProfiling = new MapMaker().weakKeys().makeMap();
-    private static final Field entityItemAge;
+    private static final Field entityItemAge, entityItemPickupDelay;
 
     static {
         Class<EntityItem> cls = EntityItem.class;
         Field[] fields = cls.getDeclaredFields();
 
-        entityItemAge = fields[1];
+        entityItemAge = fields[2];
         entityItemAge.setAccessible(true);
+        EternalItems.log.info("[set-age] Got field: " + entityItemAge);
+
+        entityItemPickupDelay = fields[3];
+        entityItemPickupDelay.setAccessible(true);
+
+        EternalItems.log.info("[get-pickup-delay] Got field: " + entityItemPickupDelay);
     }
 
     public static void preInit() {}
@@ -133,8 +139,22 @@ public class ItemCacheHandler {
         return false;
     }
 
+    private static int getPickupDelay(EntityItem entity) {
+        try {
+            // TODO: Use an access transformer instead of this slow reflection
+            return entityItemPickupDelay.getInt(entity);
+        } catch (IllegalArgumentException e) {
+            EternalItems.log.warn("[get-pickup-delay] Did you select the wrong field AlexIIL?", e);
+        } catch (IllegalAccessException e) {
+            EternalItems.log.warn("[get-pickup-delay] Did you not give yourself access to it properly AlexIIL?", e);
+        }
+        return 0;
+    }
+
     public static void itemExpired(ItemExpireEvent event) {
         EntityItem item = event.getEntityItem();
+        if (item.isDead) return;
+        if (getPickupDelay(item) == 32767) return;// Infinite pickup delay
         World world = item.worldObj;
         int itemsInWorld = getNumberOfItems(world);
 
@@ -157,7 +177,7 @@ public class ItemCacheHandler {
             if (!spaceInChunk) {
                 items.add(item);
             } else {
-                event.setExtraLife(0);
+                event.setExtraLife(1000);
                 event.setCanceled(true);
             }
         }
@@ -269,11 +289,10 @@ public class ItemCacheHandler {
 
             boolean plural = num != 1;
             String chunkCoords = "[" + ccip.chunkXPos + ", " + ccip.chunkZPos + "]";
-            String chunkCenterCoords = "[" + ccip.getCenterXPos() + ", 128," + ccip.getCenterZPosition() + "]";
 
             String key = plural ? Lib.LocaleStrings.CHAT_STATS_CHUNK_MOST_ITEMS_PLURAL : Lib.LocaleStrings.CHAT_STATS_CHUNK_MOST_ITEMS_SINGULAR;
 
-            lines[i + 1] = new TextComponentTranslation(key, num, chunkCoords, chunkCenterCoords);
+            lines[i + 1] = new TextComponentTranslation(key, num, chunkCoords);
         }
         return lines;
     }

@@ -5,10 +5,6 @@ public class Lib {
         public static final String ID = "eternalitems";
         public static final String NAME = "Eternal Items";
         public static final String VERSION = "@VERSION@";
-        public static final String FORGE_VERSION_MIN = "@FORGE_VERSION_MIN@";
-        public static final String FORGE_VERSION_MAX = "@FORGE_VERSION_MAX@";
-
-        public static final String DEPS = "required-after:forge[" + FORGE_VERSION_MIN + "," + FORGE_VERSION_MAX + ")";
     }
 
     public static class LocaleStrings {
