@@ -1,10 +1,6 @@
-package alexiil.mods.items;
+package alexiil.mc.mod.items;
 
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 import com.google.common.collect.Maps;
@@ -51,10 +47,9 @@ public class ItemWorldSaveHandler extends WorldSavedData {
         list = nbt.getTagList("chunkStats", 11);
         chunkStats.clear();
         for (int i = 0; i < list.tagCount(); i++) {
-            int[] intArray = list.getIntArray(i);
+            int[] intArray = list.getIntArrayAt(i);
             if (intArray.length != 3) {
-                EternalItems.INSTANCE.log.warn("Found an integer array that was not 3 long!! " + "(array = " + Arrays.toString(intArray)
-                    + ", index = " + i + ")");
+                EternalItems.log.warn("[item-saving] Found an integer array that was not 3 long!! " + "(array = " + Arrays.toString(intArray) + ", index = " + i + ")");
             } else {
                 chunkStats.put(new ChunkCoordIntPair(intArray[0], intArray[1]), intArray[2]);
             }
