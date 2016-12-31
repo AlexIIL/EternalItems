@@ -7,6 +7,8 @@ public class Lib {
         public static final String VERSION = "@VERSION@";
     }
 
+    /** Holds all of the strings sent to players. These are enumerated here rather than placed all throughout the source
+     * code as there aren't a lot of them. */
     public static class LocaleStrings {
         public static final String CHAT_FAIL_NULL_WORLD = "eternalitems.chat.fail.nullworld";
         public static final String CHAT_FAIL_NO_ITEMS = "eternalitems.chat.fail.noitems";

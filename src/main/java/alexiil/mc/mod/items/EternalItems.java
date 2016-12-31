@@ -1,15 +1,22 @@
 package alexiil.mc.mod.items;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.logging.log4j.Logger;
 
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.world.WorldServer;
 
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.ConfigElement;
 import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.common.config.Property;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.item.ItemExpireEvent;
 import net.minecraftforge.event.world.WorldEvent;
+import net.minecraftforge.fml.client.config.IConfigElement;
+import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
@@ -25,6 +32,9 @@ public class EternalItems {
     public static EternalItems INSTANCE;
     public static Logger log;
     public static Configuration cfg;
+
+    private static Property propMaxItems, propMaxItemsPerChunk, propHardCap;
+
     private static int maxItemsPerWorld, maxItemsPerChunk;
     private static boolean hardCap;
 
@@ -38,17 +48,28 @@ public class EternalItems {
 
         cfg.load();
 
-        String comment = "The maximum number of items allowed per world before new ones start to be cached.";
-        maxItemsPerWorld = cfg.getInt("maxItems", Configuration.CATEGORY_GENERAL, 600, 20, 100000, comment);
+        propMaxItems = cfg.get(Configuration.CATEGORY_GENERAL, "maxItems", 10_000).setMinValue(20).setMaxValue(1_000_000);
+        propMaxItems.setComment("The maximum number of items allowed per world before new ones start to be cached.");
 
-        comment = "The maximum number of items allowed per chunk before new ones are added to the queue of that chunk";
-        maxItemsPerChunk = cfg.getInt("maxItemsPerChunk", Configuration.CATEGORY_GENERAL, 30, 5, 1000, comment);
+        propMaxItemsPerChunk = cfg.get(Configuration.CATEGORY_GENERAL, "maxItemsPerChunk", 100)
+                                  .setMinValue(5)
+                                  .setMaxValue(1_000);
+        propMaxItemsPerChunk.setComment("The maximum number of items allowed per chunk before new ones are added to the queue of that chunk");
 
-        comment = "True if you want the items added to the world to be hard capped to the number ";
-        comment += "(but the items that expire in the world will always be added to the cache if there is not enough room).";
-        hardCap = cfg.getBoolean("hardCap", Configuration.CATEGORY_GENERAL, true, comment);
+        propHardCap = cfg.get(Configuration.CATEGORY_GENERAL, "hardCap", true);
+        propHardCap.setComment("True if you want the items added to the world to be "
+            + "hard capped to the number (but the items that expire in the world will "
+            + "always be added to the cache if there is not enough room).");
+
+        loadFromConfig();
 
         cfg.save();
+    }
+
+    private static void loadFromConfig() {
+        maxItemsPerWorld = propMaxItems.getInt();
+        maxItemsPerChunk = propMaxItemsPerChunk.getInt();
+        hardCap = propHardCap.getBoolean();
     }
 
     public static int getMaxItems() {
@@ -67,7 +88,7 @@ public class EternalItems {
     // Mod related events
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void itemExpireEvent(ItemExpireEvent event) {
-        if (hardCap && event.getEntity().worldObj instanceof WorldServer) ItemCacheHandler.itemExpired(event);
+        if (hardCap && event.getEntity().world instanceof WorldServer) ItemCacheHandler.itemExpired(event);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGH)
@@ -85,5 +106,20 @@ public class EternalItems {
     @SubscribeEvent
     public void worldTickEvent(WorldTickEvent event) {
         if (event.world instanceof WorldServer) ItemCacheHandler.worldTick(event);
+    }
+
+    @SubscribeEvent
+    public void onConfigChange(ConfigChangedEvent cce) {
+        if (Lib.Mod.ID.equals(cce.getModID())) {
+            loadFromConfig();
+        }
+    }
+
+    public static List<IConfigElement> getConfigElements() {
+        List<IConfigElement> elements = new ArrayList<>();
+        elements.add(new ConfigElement(propMaxItems));
+        elements.add(new ConfigElement(propMaxItemsPerChunk));
+        elements.add(new ConfigElement(propHardCap));
+        return elements;
     }
 }

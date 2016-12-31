@@ -75,7 +75,7 @@ public class ItemCacheHandler {
 
     private static void incrementChunkStat(World world, Chunk chunk) {
         Map<ChunkPos, Integer> stats = getChunkMap(world);
-        ChunkPos ccip = chunk.getChunkCoordIntPair();
+        ChunkPos ccip = chunk.getPos();
         if (!stats.containsKey(ccip)) {
             stats.put(ccip, 1);
         } else {
@@ -100,7 +100,8 @@ public class ItemCacheHandler {
         ItemWorldSaveHandler items;
         try {
             ItemWorldSaveHandler.WORLD_HOLDER.set(world);
-            WorldSavedData data = world.getPerWorldStorage().getOrLoadData(ItemWorldSaveHandler.class, ItemWorldSaveHandler.NAME);
+            WorldSavedData data = world.getPerWorldStorage().getOrLoadData(ItemWorldSaveHandler.class,
+                                                                           ItemWorldSaveHandler.NAME);
             if (data == null) {
                 items = new ItemWorldSaveHandler(ItemWorldSaveHandler.NAME);
                 world.getPerWorldStorage().setData(ItemWorldSaveHandler.NAME, items);
@@ -118,6 +119,10 @@ public class ItemCacheHandler {
 
     public static void itemAdded(EntityJoinWorldEvent event) {
         World world = event.getWorld();
+
+        world.theProfiler.startSection("eternalitems");
+        world.theProfiler.startSection("item_added");
+
         EntityItem item = (EntityItem) event.getEntity();
         int itemsInWorld = getNumberOfItems(world);
         ChunkPos ccip = new ChunkPos(((int) item.posX) >> 4, ((int) item.posZ) >> 4);
@@ -129,6 +134,9 @@ public class ItemCacheHandler {
         }
         Chunk chunk = world.getChunkFromBlockCoords(item.getPosition());
         incrementChunkStat(world, chunk);
+
+        world.theProfiler.endSection();
+        world.theProfiler.endSection();
     }
 
     private static boolean setAgeTo0(EntityItem entity) {
@@ -160,7 +168,9 @@ public class ItemCacheHandler {
         EntityItem item = event.getEntityItem();
         if (item.isDead) return;
         if (getPickupDelay(item) == 32767) return;// Infinite pickup delay
-        World world = item.worldObj;
+        World world = item.world;
+        world.theProfiler.startSection("eternalitems");
+        world.theProfiler.startSection("item_expire");
         int itemsInWorld = getNumberOfItems(world);
 
         ChunkPos ccip = new ChunkPos(((int) item.posX) >> 4, ((int) item.posZ) >> 4);
@@ -186,12 +196,18 @@ public class ItemCacheHandler {
                 event.setCanceled(true);
             }
         }
+        world.theProfiler.endSection();
+        world.theProfiler.endSection();
     }
 
     public static void worldTick(WorldTickEvent worldTickEvent) {
         if (!worldTickEvent.phase.equals(Phase.END)) return;
         World world = worldTickEvent.world;
+        world.theProfiler.startSection("eternalitems");
+        world.theProfiler.startSection("world_tick");
         tryAddItems(world, getCachedItems(world));
+        world.theProfiler.endSection();
+        world.theProfiler.endSection();
     }
 
     private static void tryAddItems(World world, Map<ChunkPos, Deque<EntityItem>> map) {
@@ -215,8 +231,8 @@ public class ItemCacheHandler {
                 continue;
             }
             EntityItem entity = queue.remove();
-            entity.worldObj = world;// If this has been loaded, then it could be null, so just set it anyway
-            world.spawnEntityInWorld(entity);
+            entity.world = world;// If this has been loaded, then it could be null, so just set it anyway
+            world.spawnEntity(entity);
             itemsInWorld++;
             added = true;
 
@@ -295,7 +311,8 @@ public class ItemCacheHandler {
             boolean plural = num != 1;
             String chunkCoords = "[" + ccip.chunkXPos + ", " + ccip.chunkZPos + "]";
 
-            String key = plural ? Lib.LocaleStrings.CHAT_STATS_CHUNK_MOST_ITEMS_PLURAL : Lib.LocaleStrings.CHAT_STATS_CHUNK_MOST_ITEMS_SINGULAR;
+            String key = plural ? Lib.LocaleStrings.CHAT_STATS_CHUNK_MOST_ITEMS_PLURAL
+                : Lib.LocaleStrings.CHAT_STATS_CHUNK_MOST_ITEMS_SINGULAR;
 
             lines[i + 1] = new TextComponentTranslation(key, num, chunkCoords);
         }
