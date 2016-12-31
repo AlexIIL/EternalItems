@@ -88,7 +88,7 @@ public class EternalItems {
     // Mod related events
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void itemExpireEvent(ItemExpireEvent event) {
-        if (hardCap && event.getEntity().world instanceof WorldServer) ItemCacheHandler.itemExpired(event);
+        if (hardCap && event.getEntity().worldObj instanceof WorldServer) ItemCacheHandler.itemExpired(event);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGH)

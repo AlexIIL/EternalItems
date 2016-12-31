@@ -75,7 +75,7 @@ public class ItemCacheHandler {
 
     private static void incrementChunkStat(World world, Chunk chunk) {
         Map<ChunkPos, Integer> stats = getChunkMap(world);
-        ChunkPos ccip = chunk.getPos();
+        ChunkPos ccip = chunk.getChunkCoordIntPair();
         if (!stats.containsKey(ccip)) {
             stats.put(ccip, 1);
         } else {
@@ -168,7 +168,7 @@ public class ItemCacheHandler {
         EntityItem item = event.getEntityItem();
         if (item.isDead) return;
         if (getPickupDelay(item) == 32767) return;// Infinite pickup delay
-        World world = item.world;
+        World world = item.worldObj;
         world.theProfiler.startSection("eternalitems");
         world.theProfiler.startSection("item_expire");
         int itemsInWorld = getNumberOfItems(world);
@@ -231,8 +231,8 @@ public class ItemCacheHandler {
                 continue;
             }
             EntityItem entity = queue.remove();
-            entity.world = world;// If this has been loaded, then it could be null, so just set it anyway
-            world.spawnEntity(entity);
+            entity.worldObj = world;// If this has been loaded, then it could be null, so just set it anyway
+            world.spawnEntityInWorld(entity);
             itemsInWorld++;
             added = true;
 
